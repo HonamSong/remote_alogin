@@ -1,3 +1,4 @@
+
 # remote_alogin
  telnet/ssh server auto login script
 
@@ -16,10 +17,17 @@ cd {git_path}
 ```
 
 ## Setting Alias 
+> bash
 ```
 echo "alias r_conn='/bin/bash {$GIT_CLONE_PATH}/r_conn.sh'" >> ~/.bashrc
 source ~/.bashrc
 ``` 
+> zsh
+```
+echo "alias r_conn='/bin/bash /app/test/remote_alogin/r_conn.sh'" >> ~/.zshrc
+source ~/.zshrc
+``` 
+
 
 ## Help
 
@@ -47,4 +55,5 @@ usage) /app/test/remote_alogin/r_conn.sh [options]
     --is_showsend  	print connect command
 [ user_name@hostname ] #
 ```
+
 
