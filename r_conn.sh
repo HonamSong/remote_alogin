@@ -19,8 +19,8 @@ REMOTE_SFTP_CMD="/usr/bin/sftp -oStrictHostKeyChecking=no"
 
 null_string=$(printf "    ")
 export is_show_log="false"
-export sep_len=${sep_len:-0}
 export is_show_send_cmd='false'
+export sep_len=${sep_len:-0}
 ##################################################################################################3
 ## add  .bashrc
 # ex =>  echo "alias r_conn='sh /app/test/r_conn.sh'" >> ~/.bashrc ; source  ~/.bashrc
