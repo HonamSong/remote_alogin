@@ -1,5 +1,6 @@
 #!/bin/bash 
 
+_version_=" 0.0.4"
 
 # 스크립트 실행 경로
 SCRIPT_PATH=$(cd $(echo $0 | xargs dirname) ; pwd ; cd - > /dev/null )
@@ -21,9 +22,7 @@ export is_show_log="false"
 export sep_len=${sep_len:-0}
 export is_show_send_cmd='false'
 ##################################################################################################3
-
 ## add  .bashrc
-# ex
 # ex =>  echo "alias r_conn='sh /app/test/r_conn.sh'" >> ~/.bashrc ; source  ~/.bashrc
 
 #####  USER - Modify >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -31,14 +30,11 @@ export is_show_send_cmd='false'
 SVR_LIST="${SCRIPT_PATH}/conn_info"
 MENU_TITLE="TB_SEVER_CONNECTOR"
 ##### <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-
-
 ##################################################################################################3
 
-_version_=" 0.0.3"
 
 _version(){
-	printf "${SCRIPT_NAME} Version : ${_version_}\n"
+	printf "%s Version : %s\n" "${SCRIPT_NAME}" "${_version_}"
 }
 
 _banner() {
@@ -49,7 +45,7 @@ banner="
  \\ \\ \\  |  _  | |___| |___|  __/   / / /
   \\_\\_\\ |_| |_|_____|_____|_|     /_/_/
 "
-printf "\t${banner}"
+printf "\t%s" "${banner}"
 }
 
 show_print(){
@@ -85,7 +81,7 @@ print_liner() {
 
 	start_num=1
 	while [ ${start_num} -le ${loop_cnt} ] ; do
-		printf "${line_str}"
+		printf "%s" "${line_str}"
 		if [ ${start_num} -eq ${loop_cnt} ]; then 
 			printf "\n"
 		fi
@@ -109,7 +105,6 @@ _help() {
 	printf "    %-15s\t%s\n" "--is_showsend" "print connect command"
 }
 
-
 add_line_num() {
 	start_line=1
 	end_line=100000
@@ -117,7 +112,6 @@ add_line_num() {
 	is_break="false"
 
 	echo " ** group_name : ${group_name}"
-
 
 	cat < ${SVR_LIST} | grep -Ei "^<<.*${group_name}.*>>$" > /dev/null
 	if [ $? -eq 0 ] ; then 
