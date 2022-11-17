@@ -139,7 +139,7 @@ add_line_num() {
 					sed -n ${start_line}p ${SVR_LIST} | grep -E "^<<|^\[" > /dev/null
 					rst_code=$?
 					if [ ${rst_code} -eq 0 ] ; then
-						add_line=$((${start_line} + 1))
+						add_line=$((${start_line} - 1))
 						is_break="true"
 						show_print "${SCRIPT_NAME}.${LINENO} | Add line num : ${add_line} , is_break = ${is_break}"
 						break;
