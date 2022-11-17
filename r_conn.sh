@@ -638,7 +638,7 @@ create_expect_command() {
 	done
 
 	## honam
-	if [ ${ans_send_cmd} ] && [ $(echo "${ans_send_cmd}" | wc -c) -ne 0 ]; then
+	if [ "${ans_send_cmd}" ] && [ $(echo "${ans_send_cmd}" | wc -c) -ne 0 ]; then
 		send_cmd_text="expect -timeout 1 '\[#$%>\]'\nsend \"${ans_send_cmd}\\r\""
 		echo -e "${send_cmd_text}" >>  ${EXPECT_TEMP_FILE}
 	fi
