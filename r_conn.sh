@@ -269,7 +269,8 @@ add_host() {
 del_host() {
         while true; do
                 echo ""
-                read -e -p "** WARN) Delete Server Name or Num(index) ? " ans_del_server
+                DEL_PROMPT="${c_red}  ** WARN) Delete Server Name or Num(index) ?${no_color}"
+                read -e -p "$(echo -e ${DEL_PROMPT}) " ans_del_server
 
 		# "${ans_del_server}"
 		del_server_name=$(get_grep_keyword "${ans_del_server}" "${ans_del_server}")
@@ -280,9 +281,10 @@ del_host() {
 
 		# printf " - Delete List Info : $(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")\n"
 		del_list=$(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")
-		printf " - Delete List Info : %s\n" "${del_list}"
+		printf "   ${c_yellow}- Delete List Info${no_color} : %s\n" "${del_list}"
 
-                read -e -p "Do you want to real delete? (y/n) ? " ans_delete
+                DEL_PROMPT="${c_red} Do you want to really delete? (y/n) ? ${no_color}"
+                read -e -p "$(echo -e ${DEL_PROMPT})" ans_delete
 		case ${ans_delete} in 
 			[Yy] | [Yy][Ee][Ss] )
 				show_print "${SCRIPT_NAME}.${LINENO} | CMD) sed -i \"/^${del_hostname}.*${del_ipaddr}/d\" ${SVR_LIST}"
@@ -296,7 +298,7 @@ del_host() {
 
 		
                 echo ""
-                read -e -p "* Would you like to Delete Continue? (y/n) " ans_del_continue
+                read -e -p "  * Would you like to Delete Continue? (y/n) " ans_del_continue
                 case ${ans_del_continue} in
                         [Nn] | [Nn][Oo] )
                                 printf "\n\tReturn to Menu list!!\n"
@@ -629,18 +631,19 @@ create_expect_command() {
 
 
 
-		if [ "${is_show_send_cmd}" == "false" ] ; then
-			echo_text="puts \"Remote Server Connecting...(${remote_conn_cnt}/${total_conn_cnt}) \""
+		if [ "${is_show_send_cmd}" == "true" ] ; then
+			echo_text="puts \" !! Remote Server Connecting...(${remote_conn_cnt}/${total_conn_cnt}) \""
 		else
 			echo_text=""
 		fi
-		#	echo_text="puts \"..Remote Server Connecting...[ ${remote_conn_cnt}/${total_conn_cnt} ] \""
+
 		{
 			echo -e "${a_text}"
 			echo -e "${b_text}"
 			echo -e "${c_text}"
 			echo -e "${echo_text}"
 		} >> ${EXPECT_TEMP_FILE}
+
 		start_cnt=$(( ${start_cnt} - 1 ))
 		remote_conn_cnt=$(( ${remote_conn_cnt} + 1 ))
 	done
@@ -739,9 +742,9 @@ select_server() {
 		debug_stat=$(set -o | grep "xtrace" | awk '{print $(NF)}')
 		clear
 		printf "\n<< %s >>\n" "$(date)"
-		printf "\t - %-21s : %s\n" "Debug Mode"          "${debug_stat}"
-		printf "\t - %-21s : %s\n" "Show Logging"        "${is_show_log}"
-		printf "\t - %-21s : %s\n" "View Connecting Log" "${is_show_send_cmd}"
+		printf "\t\t - %-21s : %s\n" "Debug Mode"          "${debug_stat}"
+		printf "\t\t - %-21s : %s\n" "Show Logging"        "${is_show_log}"
+		printf "\t\t - %-21s : %s\n" "View Connecting Log" "${is_show_send_cmd}"
 		list_print;
 		cat ${TEMP_FILE}
 		echo ""
@@ -785,7 +788,7 @@ select_server() {
 					sleep 1
 					;;
 				"$(echo ${select_del_num})" | "$(echo "${select_del_num#0}")" | [Aa][Dd][Dd])
-					printf "${c_red}Delete Server list${no_color}\n"
+					printf "${c_red}\t** Delete Server list${no_color}\n"
 					del_host;
 					sleep 1
 					;;
