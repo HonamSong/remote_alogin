@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-_version_=" 0.0.4"
+_version_=" 0.0.5"
 
 # 스크립트 실행 경로
 SCRIPT_PATH=$(cd $(echo $0 | xargs dirname) ; pwd ; cd - > /dev/null )
@@ -91,9 +91,9 @@ print_liner() {
 
 _help() {
 	_banner;
-	printf "\n  + Version : ${_version_}\n"
+	printf "\n  + Version : %s\n" "${_version_}"
 	printf "\n\n"
-	printf "usage) $0 [options]\n\n"
+	printf "usage) %s [options]\n\n" "$0"
 	print_liner "=" "50"
 
 	printf "\n"
@@ -114,21 +114,25 @@ add_line_num() {
 	echo " ** group_name : ${group_name}"
 
 	cat < ${SVR_LIST} | grep -Ei "^<<.*${group_name}.*>>$" > /dev/null
-	if [ $? -eq 0 ] ; then 
+	run_return_code=$?
+	if [ ${run_return_code} -eq 0 ] ; then
 		while [ ${start_line} -le ${end_line} ]; do
 			show_print "${SCRIPT_NAME}.${LINENO} | CMD) sed -n ${start_line}p ${SVR_LIST} | grep -Ei \"${group_name}\" > /dev/null"
 			sed -n ${start_line}p ${SVR_LIST} | grep -Ei "${group_name}" > /dev/null
-			if [ $? -eq 0 ] ; then 
+			run_return_code=$?
+			if [ ${run_return_code} -eq 0 ] ; then
 				start_line=$((${start_line} + 1))
 				while true ; do 
 					show_print "${SCRIPT_NAME}.${LINENO} | CMD) sed -n ${start_line}p ${SVR_LIST} | grep -E \"^<<|^\[\" > /dev/null "
-					sed -n ${start_line}p ${SVR_LIST} | grep -E "^<<|^\[" > /dev/null 
-					if [ $? -eq 0 ] ; then 
-						add_line=$((${start_line} - 1))
+					sed -n ${start_line}p ${SVR_LIST} | grep -E "^<<|^\[" > /dev/null
+					rst_code=$?
+					if [ ${rst_code} -eq 0 ] ; then
+						add_line=$((${start_line} + 1))
 						is_break="true"
 						show_print "${SCRIPT_NAME}.${LINENO} | Add line num : ${add_line} , is_break = ${is_break}"
 						break;
 					else
+						show_print "${SCRIPT_NAME}.${LINENO} | Comman Return Code : ${rst_code}"
 						start_line=$((${start_line} + 1))
 					fi
 				done
@@ -143,13 +147,14 @@ add_line_num() {
 			fi
 		done
 	else
-		if [ $(cat < ${SVR_LIST} | grep -Ei "^<< ETC >>$" > /dev/null ; echo $?) -eq 0 ]; then 
+		G_NAME=$(echo ${group_name} | tr [:lower:] [:upper:])
+		if [ $(cat < ${SVR_LIST} | grep -Ei "^<< ETC >>$" > /dev/null ; echo $?) -eq 0 ]; then
 			group_add_line=$(($(cat -n < ${SVR_LIST} | grep -Ei "<< ETC >>$" | awk '{print $1}') - 1))
 			show_print "${SCRIPT_NAME}.${LINENO} | CMD) sed -i \"${group_add_line} i\\\n<< $(echo ${group_name} | tr [:lower:] [:upper:]) >>\" ${SVR_LIST}"
-			sed -i "${group_add_line} i\\\n<< $(echo ${group_name} | tr [:lower:] [:upper:]) >>" ${SVR_LIST}
+			sed -i "${group_add_line} i\\\n<< ${G_NAME} >>" ${SVR_LIST}
 		else
 			show_print "${SCRIPT_NAME}.${LINENO} | CMD) printf << $(echo ${group_name} | tr [:lower:] [:upper:]) >>"
-			printf "\n<< $(echo ${group_name} | tr [:lower:] [:upper:]) >>\n\n" >> ${SVR_LIST}
+			printf "\n<< %s >>\n\n" "${G_NAME}">> ${SVR_LIST}
 		fi
 		add_line=$(cat < ${SVR_LIST}|wc -l)
 		show_print "${SCRIPT_NAME}.${LINENO} | var.add_line = ${add_line}"
@@ -162,21 +167,21 @@ add_host() {
 	while true; do
 		if [ -f "${SVR_LIST}" ] ; then 
 			#echo " SERVER List File  :  ${SVR_LIST} +++++++++++++++++"
-			printf "\n ++ SERVER List File  :  ${SVR_LIST} +++++++++++++++++\n"
+			printf "\n ++ SERVER List File  :  %s +++++++++++++++++\n" "${SVR_LIST}"
 			printf "%s\n\n\n" "$(cat ${SVR_LIST})" 
 			#echo ""
 		fi
 
-		read -e -p " + Input) Group Name ? " add_groupname
+		read -e -p " + Input) Group Name ? " add_group_name
 		read -e -p " + Input) Hostname ? " add_hostname
 		while true; do 
 			read -e -p " + ${re_cmd}Input) IP Address ? " add_ip_addr
 	
-			reg_ip_addr='[1-9]|[1-9][0-9]|[1-2][0-9][0-9]'
+			reg_ip_addr='[0-9]|[1-9][0-9]|[1-2][0-9][0-9]'
 			if [ $( echo ${add_ip_addr} | grep -E "(${reg_ip_addr}?)\.(${reg_ip_addr}?)\.(${reg_ip_addr}?)\.(${reg_ip_addr})$"  > /dev/null; echo $?) -eq 0 ] ; then 
 				break;
 			else
-				printf "\tErr) %s\n" "Not IP Address Partern!! .. \"${add_ip_addr}\""
+				printf "\tErr) %s %s\n" "Not IP Address Pattern!! .." "${add_ip_addr}"
 				printf "\n%s\n" " ==>>> Retry input!!"
 				re_cmd="RE-"
 			fi
@@ -185,11 +190,18 @@ add_host() {
 		read -e -p " + Input) User Login Name ? " add_username
 		read -e -p " + Input) User Login Password? " add_passwd
 		read -e -p " + Input) Connection Type (ssh or telnet / Default: ssh) ? " add_type
-		read -e -p " + Input) Connection Port ? " add_port
+		if [ "$(echo ${add_type}| tr [:upper:] [:lower:])" == "ssh" ]; then
+			default_port=22
+		elif  [ "$(echo ${add_type}| tr [:upper:] [:lower:])" == "telnet" ]; then
+			default_port=23
+		else
+			default_port="None"
+		fi
+		read -e -p " + Input) Connection Port (Default: ${default_port}) ? " add_port
 		read -e -p " + Input) Connection Gateway (Default:None)? " add_gateway
 
-		if [ -z "${add_groupname}" ] ; then 
-			add_groupname="ETC"
+		if [ -z "${add_group_name}" ] ; then
+			add_group_name="ETC"
 		fi
 
 		if [ -z "${add_type}" ] ; then 
@@ -202,7 +214,7 @@ add_host() {
 			elif [ "$(echo ${add_type}| tr [:upper:] [:lower:])" == "telnet" ] ; then
 				add_port="23"
 			else
-				read -e -p " + Connection Port ? " add_port
+				read -e -p " + Retry Input Remote Connection Port ? " add_port
 			fi
 		fi
 
@@ -229,8 +241,8 @@ add_host() {
 				
 
 		input_server_info="${add_hostname}\t${add_ip_addr}\t${add_username}\t${add_passwd}\t${add_type}\t${add_port}\t${add_gateway}"
-		add_line_num "${add_groupname}"
-		printf "${input_server_info}\n"
+		add_line_num "${add_group_name}"
+		printf "%s\n" "${input_server_info}"
 		sed -i "${add_line} i\\${input_server_info}"  ${SVR_LIST}
 
 		echo ""
@@ -258,8 +270,10 @@ del_host() {
 		del_hostname=$(echo ${select_server} | awk -F '(' '{print $1}')
 		del_ipaddr=$(echo ${select_server} | awk -F '(' '{print $2}' | sed -e "s/)//g")
 		show_print "${SCRIPT_NAME}.${LINENO} | del_server_name: ${del_server_name} , select_server: ${select_server}"
-		printf " - Delete List Info : $(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")\n"
-		
+		# printf " - Delete List Info : $(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")\n"
+		del_list=$(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")
+		printf " - Delete List Info : %s\n" "${del_list}"
+
                 read -e -p "Do you want to real delete? (y/n)  ? " ans_delete
 		case ${ans_delete} in 
 			[Yy] | [Yy][Ee][Ss] )
@@ -267,7 +281,8 @@ del_host() {
 				sed -i "/^${del_hostname}.*${del_ipaddr}/d" ${SVR_LIST}
 			;;
 			*)
-				printf  "Not Delete :  $(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")\n"
+				#printf  "- Not Delete :  $(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")\n"
+				printf  "- Not Delete : %s\n" "${del_list}"
 			;;
 		esac
 
@@ -408,10 +423,10 @@ exit_print() {
 }
 
 init_serverlist() {
-	printf " -- Not fount file : \"${SVR_LIST}\"\n"
-	printf " -- Add connection serverlist\n"
+	printf " -- Not fount file : \"%s\"\n" "${SVR_LIST}"
+	printf " -- Add connection server list\n"
 
-	if [ $(cat  ${SVR_LIST} | grep -E "^# HOSTNAME.*GATEWAY$"> /dev/null; echo "$?") -ne 0 ] ; then
+	if [ $(cat ${SVR_LIST} | grep -E "^# HOSTNAME.*GATEWAY$"> /dev/null; echo "$?") -ne 0 ] ; then
 		printf "# HOSTNAME\tIP_ADDRESS\tUSER_NAME\tPASSWORD\tSSH/TELNET\tPORT\tGATEWAY\n" > ${SVR_LIST}
 	fi
 	add_host;
@@ -452,10 +467,10 @@ list_print() {
 
 				start_line=$((${start_line} + 1))
 				if [ ${start_line} -gt ${end_line} ] ; then 
-					show_print "${SCRIPT_NAME}.${LINENO} | start_line: ${start_line} , end_line : ${end_line}"
-					script_mgmt_print ${max_string_len} >>  ${TEMP_FILE}
-					script_view_print ${max_string_len} >>  ${TEMP_FILE}
-					exit_print ${max_string_len} >>  ${TEMP_FILE}
+					show_print "${SCRIPT_NAME}.${LINENO} | start_line: ${start_line}, end_line : ${end_line}"
+					script_mgmt_print ${max_string_len} >> ${TEMP_FILE}
+					script_view_print ${max_string_len} >> ${TEMP_FILE}
+					exit_print ${max_string_len} >> ${TEMP_FILE}
 					start_line=$((${end_line} + 1000))	
 				fi
 				
@@ -525,8 +540,8 @@ expect_command() {
 		;;
 		*)
 			printf "\tError] Not connect type only ssh or telnet!\n"
-			printf "\tError] Now remote connect type is \"${conn_type}\"\n"
-			printf "\tscript exit.....\n"
+			printf "\tError] Now remote connect type is \"%s\"\n" "${SVR_LIST}"
+			printf "\t%s exit.....\n" "script"
 			exit 1
 		;;
 	esac
@@ -557,7 +572,7 @@ create_expect_command() {
 		while true; do
 			get_parser "${tmp_conn_ip_addr}" "${tmp_conn_hostname}"
 			show_print "${SCRIPT_NAME}.${LINENO} | whileloop[${while_index}] | IP : ${tmp_conn_ip_addr} , conn_svr : ${tmp_conn_hostname} , conn_type: ${conn_type}, gw_svr : ${conn_gateway} "
-			if [ ${conn_gateway} ] && [ $(echo ${conn_gateway}|wc -c) -ge 1 ]; then
+			if [ ${conn_gateway} ] && [ $(echo ${conn_gateway} | wc -c) -ge 1 ]; then
 				if [ $(echo ${conn_gateway} | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' > /dev/null ; echo $?) -eq 0 ] ; then 
 					gw_svr_info[${while_index}]=$(cat < ${SVR_LIST} | grep -Ev "^#" | grep -E "${conn_gateway}")
 					show_print "${SCRIPT_NAME}.${LINENO} | CMD) cat < ${SVR_LIST} | grep -Ev \"^#\" | grep -E \"${conn_gateway}\""
@@ -567,7 +582,6 @@ create_expect_command() {
 					show_print "${SCRIPT_NAME}.${LINENO} | CMD) cat < ${SVR_LIST} | grep -Ev \"^#\" | grep -E \"^${conn_gateway}\""
 					show_print "${SCRIPT_NAME}.${LINENO} |  ==> result : gw_svr_info[${while_index}] : ${gw_svr_info[${while_index}]}"
 				fi
-
 
 				tmp_conn_hostname=$(echo "${gw_svr_info[${while_index}]}" | awk '{print $1}')
 				tmp_conn_ip_addr=$(echo "${gw_svr_info[${while_index}]}" | awk '{print $2}')
@@ -583,7 +597,7 @@ create_expect_command() {
 		done
 	fi
 
-
+send_cmd_text
 	show_print "${SCRIPT_NAME}.${LINENO} | array count : ${#gw_svr_info[@]}\n"
 	start_cnt=$(( ${#gw_svr_info[@]} - 1))
 	total_conn_cnt=${#gw_svr_info[@]}
@@ -602,10 +616,13 @@ create_expect_command() {
 		fi
 		
 		show_print "${SCRIPT_NAME}.${LINENO} | Seach start_cnt : ${start_cnt} | ${gw_svr_info[${start_cnt}]}"
-		expect_command   "${r_ip_addr}"  "${r_user_name}"  "${r_user_pass}"  "${r_conn_type}"  "${r_conn_port}" "${r_next_conn}"
+		expect_command "${r_ip_addr}" "${r_user_name}" "${r_user_pass}" "${r_conn_type}" "${r_conn_port}" "${r_next_conn}"
 		b_text="expect -timeout 1 'ssword:'"
 		c_text="send \"${r_user_pass}\\r\""
-		if [ "${is_show_send_cmd}" == "false" ] ; then 
+
+
+
+		if [ "${is_show_send_cmd}" == "false" ] ; then
 			echo_text="puts \"Remote Server Connecting...(${remote_conn_cnt}/${total_conn_cnt}) \""
 		else
 			echo_text=""
@@ -620,6 +637,12 @@ create_expect_command() {
 		start_cnt=$(( ${start_cnt} - 1 ))
 		remote_conn_cnt=$(( ${remote_conn_cnt} + 1 ))
 	done
+
+	## honam
+	if [ ${ans_send_cmd} ] && [ $(echo "${ans_send_cmd}" | wc -c) -ne 0 ]; then
+		send_cmd_text="expect -timeout 1 '\[#$%>\]'\nsend \"${ans_send_cmd}\\r\""
+		echo -e "${send_cmd_text}" >>  ${EXPECT_TEMP_FILE}
+	fi
 
 	#printf "${gw_svr_info[*]}\n"
 	show_print "${SCRIPT_NAME}.${LINENO} | get gateway loop finished"
@@ -807,16 +830,20 @@ select_server() {
 			printf "\n\n\t ++ Re-Select Server ++\n"
 			printf "\t ++ Re-Select Server ++\n"
 			sep_print ${sep_len}
-			printf "${conn_servers}\n" | tee ${TEMP_FILE}
+			printf "%s\n" "${conn_servers}" | tee ${TEMP_FILE}
 			sep_print ${sep_len}
 			echo ""
-			read -e -p $"${null_string}Re-Input) Re Select ${input_text} ? " ans_select
+			read -e -p "${null_string}Re-Input) Re Select ${input_text} ? " ans_select
 			grep_keyword=$(get_grep_keyword "${ans_select}")
 			conn_servers=$(cat < ${TEMP_FILE} | grep -E "${grep_keyword}")
 		fi
 
 		sleep 0.2
 	done
+
+	# honam
+	read -e -p " + Input) Send Command ? " ans_send_cmd
+	export ans_send_cmd
 
 	connector "${conn_ip}" "${conn_hostname}"
 
