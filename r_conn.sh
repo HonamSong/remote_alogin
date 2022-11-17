@@ -735,7 +735,7 @@ select_server() {
 		
 		debug_stat=$(set -o | grep "xtrace" | awk '{print $(NF)}')
 		clear
-		printf "\n<< %s >>\n" "$(data)"
+		printf "\n<< %s >>\n" "$(date)"
 		printf "\t - %-21s : %s\n" "Debug Mode"          "${debug_stat}"
 		printf "\t - %-21s : %s\n" "Show Logging"        "${is_show_log}"
 		printf "\t - %-21s : %s\n" "View Connecting Log" "${is_show_send_cmd}"
