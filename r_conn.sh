@@ -155,7 +155,7 @@ add_line_num() {
 
 			if [ "${is_break}" == "true" ] ; then 
 				start_line=$((${start_line} + ${end_line}))
-				show_print "${SCRIPT_NAME}.${LINENO} | add_line True , start_line=${start_line}"
+				show_print "${SCRIPT_NAME}.${LINENO} | add_line True, start_line=${start_line}"
 			fi
 		done
 	else
@@ -164,11 +164,13 @@ add_line_num() {
 			group_add_line=$(($(cat -n < ${SVR_LIST} | grep -Ei "<< ETC >>$" | awk '{print $1}') - 1))
 			show_print "${SCRIPT_NAME}.${LINENO} | CMD) sed -i \"${group_add_line} i\\\n<< $(echo ${group_name} | tr [:lower:] [:upper:]) >>\" ${SVR_LIST}"
 			sed -i "${group_add_line} i\\\n<< ${G_NAME} >>" ${SVR_LIST}
+			add_line=$(( ${group_add_line} + 1 ))
 		else
 			show_print "${SCRIPT_NAME}.${LINENO} | CMD) printf << $(echo ${group_name} | tr [:lower:] [:upper:]) >>"
 			printf "\n<< %s >>\n\n" "${G_NAME}">> ${SVR_LIST}
+			add_line=$(cat < ${SVR_LIST}|wc -l)
 		fi
-		add_line=$(cat < ${SVR_LIST}|wc -l)
+
 		show_print "${SCRIPT_NAME}.${LINENO} | var.add_line = ${add_line}"
 	fi
 }
@@ -211,6 +213,11 @@ add_host() {
 		done
 
 		read -e -p " + Input) Connection Type (ssh or telnet / Default: ssh) ? " add_type
+		if [ -z "${add_type}" ] ; then
+			add_type='ssh'
+		fi
+
+
 		if [ "$(echo ${add_type}| tr [:upper:] [:lower:])" == "ssh" ]; then
 			default_port="22"
 		elif  [ "$(echo ${add_type}| tr [:upper:] [:lower:])" == "telnet" ]; then
@@ -224,10 +231,6 @@ add_host() {
 
 		if [ -z "${add_group_name}" ] ; then
 			add_group_name="ETC"
-		fi
-
-		if [ -z "${add_type}" ] ; then 
-			add_type='ssh'
 		fi
 
 		if [ -z "${add_port}" ] ; then 
