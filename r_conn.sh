@@ -597,7 +597,6 @@ create_expect_command() {
 		done
 	fi
 
-send_cmd_text
 	show_print "${SCRIPT_NAME}.${LINENO} | array count : ${#gw_svr_info[@]}\n"
 	start_cnt=$(( ${#gw_svr_info[@]} - 1))
 	total_conn_cnt=${#gw_svr_info[@]}
