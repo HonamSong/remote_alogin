@@ -269,7 +269,7 @@ add_host() {
 del_host() {
         while true; do
                 echo ""
-                DEL_PROMPT="${c_red}  ** WARN) Delete Server Name or Num(index) ?${no_color}"
+                DEL_PROMPT="${c_red}${null_string}WARN) Delete Server Name or Num(index) ?${no_color}"
                 read -e -p "$(echo -e ${DEL_PROMPT}) " ans_del_server
 
 		# "${ans_del_server}"
@@ -281,9 +281,9 @@ del_host() {
 
 		# printf " - Delete List Info : $(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")\n"
 		del_list=$(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")
-		printf "   ${c_yellow}- Delete List Info${no_color} : %s\n" "${del_list}"
+		printf "   ${c_yellow}${null_string}- Delete List Info${no_color} : %s\n" "${del_list}"
 
-                DEL_PROMPT="${c_red} Do you want to really delete? (y/n) ? ${no_color}"
+                DEL_PROMPT="${c_red}${null_string}Do you want to really delete? (y/n) ? ${no_color}"
                 read -e -p "$(echo -e ${DEL_PROMPT})" ans_delete
 		case ${ans_delete} in 
 			[Yy] | [Yy][Ee][Ss] )
@@ -788,7 +788,7 @@ select_server() {
 					sleep 1
 					;;
 				"$(echo ${select_del_num})" | "$(echo "${select_del_num#0}")" | [Aa][Dd][Dd])
-					printf "${c_red}\t** Delete Server list${no_color}\n"
+					printf "${c_red}${null_string}** Delete Server list${no_color}\n"
 					del_host;
 					sleep 1
 					;;
