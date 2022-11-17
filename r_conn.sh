@@ -4,12 +4,26 @@ _version_=" 0.0.5"
 
 # 스크립트 실행 경로
 SCRIPT_PATH=$(cd $(echo $0 | xargs dirname) ; pwd ; cd - > /dev/null )
+
 # 스크립트 실행 파일 이름
 SCRIPT_NAME=$(echo $0 | xargs basename | sed "s/.sh//g")
 
 SCRIPT_PID="$$"
 TEMP_FILE="${SCRIPT_PATH}/serverlist.tmp"
 EXPECT_TEMP_FILE="${SCRIPT_PATH}/expect_temp"
+
+
+# Color Variables
+c_red='\033[0;31m'              ## Red Color
+c_blue='\033[0;34m'             ## Blue Color
+c_yellow='\033[1;33m'           ## Yellow Color
+c_orange='\033[0;33m'           ## Orange Color
+c_green='\033[0;32m'            ## Green Color
+c_bold_green='\033[1;32m'       ## Green Color
+c_magenta='\033[1;95m'          ## magent Color (same is purple)
+c_lightred='\033[1;31m'
+no_color='\033[0m'                    ## Unset Color(NoColor)
+
 
 ### [REMOTE COMMAND] ###
 #REMOTE_SSH_CMD="/usr/bin/ssh -oStrictHostKeyChecking=no"
@@ -21,6 +35,7 @@ null_string=$(printf "    ")
 export is_show_log="false"
 export is_show_send_cmd='false'
 export sep_len=${sep_len:-0}
+
 ##################################################################################################3
 ## add  .bashrc
 # ex =>  echo "alias r_conn='sh /app/test/r_conn.sh'" >> ~/.bashrc ; source  ~/.bashrc
@@ -32,10 +47,10 @@ MENU_TITLE="TB_SEVER_CONNECTOR"
 ##### <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 ##################################################################################################3
 
-
 _version(){
 	printf "%s Version : %s\n" "${SCRIPT_NAME}" "${_version_}"
 }
+
 
 _banner() {
 banner="
@@ -66,9 +81,6 @@ int_handler() {
 	printf "\nKeyboard Interrupted. ( Ctrl + c) \n"
 	delete_file "${TEMP_FILE}"
 	delete_file "${EXPECT_TEMP_FILE}"
-	#if [ -f "${TEMP_FILE}" ]; then 
-	#	rm -rf ${TEMP_FILE}
-	#fi
 
 	# Kill the parent process of the script.
 	kill -9 ${SCRIPT_PID}
@@ -132,7 +144,7 @@ add_line_num() {
 						show_print "${SCRIPT_NAME}.${LINENO} | Add line num : ${add_line} , is_break = ${is_break}"
 						break;
 					else
-						show_print "${SCRIPT_NAME}.${LINENO} | Comman Return Code : ${rst_code}"
+						show_print "${SCRIPT_NAME}.${LINENO} | Command Return Code : ${rst_code}"
 						start_line=$((${start_line} + 1))
 					fi
 				done
@@ -166,10 +178,8 @@ add_host() {
 
 	while true; do
 		if [ -f "${SVR_LIST}" ] ; then 
-			#echo " SERVER List File  :  ${SVR_LIST} +++++++++++++++++"
 			printf "\n ++ SERVER List File  :  %s +++++++++++++++++\n" "${SVR_LIST}"
 			printf "%s\n\n\n" "$(cat ${SVR_LIST})" 
-			#echo ""
 		fi
 
 		read -e -p " + Input) Group Name ? " add_group_name
@@ -178,7 +188,9 @@ add_host() {
 			read -e -p " + ${re_cmd}Input) IP Address ? " add_ip_addr
 	
 			reg_ip_addr='[0-9]|[1-9][0-9]|[1-2][0-9][0-9]'
-			if [ $( echo ${add_ip_addr} | grep -E "(${reg_ip_addr}?)\.(${reg_ip_addr}?)\.(${reg_ip_addr}?)\.(${reg_ip_addr})$"  > /dev/null; echo $?) -eq 0 ] ; then 
+			ip_pattern_check_return_code=$( echo ${add_ip_addr} | grep -E "(${reg_ip_addr}?)\.(${reg_ip_addr}?)\.(${reg_ip_addr}?)\.(${reg_ip_addr})$" > /dev/null; echo $?)
+			if [ ${ip_pattern_check_return_code} -eq 0 ] ; then
+				unset re_cmd
 				break;
 			else
 				printf "\tErr) %s %s\n" "Not IP Address Pattern!! .." "${add_ip_addr}"
@@ -188,15 +200,25 @@ add_host() {
 			
 		done
 		read -e -p " + Input) User Login Name ? " add_username
+
 		read -e -p " + Input) User Login Password? " add_passwd
+		while true; do
+			if [ -z "${add_passwd}" ] ; then
+				read -e -p " + User Login Password? " add_passwd
+			else
+				break;
+			fi
+		done
+
 		read -e -p " + Input) Connection Type (ssh or telnet / Default: ssh) ? " add_type
 		if [ "$(echo ${add_type}| tr [:upper:] [:lower:])" == "ssh" ]; then
-			default_port=22
+			default_port="22"
 		elif  [ "$(echo ${add_type}| tr [:upper:] [:lower:])" == "telnet" ]; then
-			default_port=23
+			default_port="23"
 		else
 			default_port="None"
 		fi
+
 		read -e -p " + Input) Connection Port (Default: ${default_port}) ? " add_port
 		read -e -p " + Input) Connection Gateway (Default:None)? " add_gateway
 
@@ -222,28 +244,10 @@ add_host() {
 			add_gateway=""
 		fi
 
-
-		while true; do 
-			if [ -z "${add_passwd}" ] ; then 
-				read -e -p " + User Login Password? " add_passwd
-			else
-				break;
-			fi
-		done
-
-		while true; do 
-			if [ -z "${add_passwd}" ] ; then 
-				read -e -p " + User Login Password? " add_passwd
-			else
-				break;
-			fi
-		done
-				
-
 		input_server_info="${add_hostname}\t${add_ip_addr}\t${add_username}\t${add_passwd}\t${add_type}\t${add_port}\t${add_gateway}"
 		add_line_num "${add_group_name}"
 		printf "%s\n" "${input_server_info}"
-		sed -i "${add_line} i\\${input_server_info}"  ${SVR_LIST}
+		sed -i "${add_line} i\\${input_server_info}" ${SVR_LIST}
 
 		echo ""
 		read -e -p "* Would you like to continue adding? (y/n) " ans_continue
@@ -264,17 +268,18 @@ del_host() {
                 echo ""
                 read -e -p "** WARN) Delete Server Name or Num(index) ? " ans_del_server
 
-		 "${ans_del_server}"
+		# "${ans_del_server}"
 		del_server_name=$(get_grep_keyword "${ans_del_server}" "${ans_del_server}")
 		select_server=$(cat < ${TEMP_FILE} | grep -i "${del_server_name}" | awk '{print $3}')
 		del_hostname=$(echo ${select_server} | awk -F '(' '{print $1}')
 		del_ipaddr=$(echo ${select_server} | awk -F '(' '{print $2}' | sed -e "s/)//g")
 		show_print "${SCRIPT_NAME}.${LINENO} | del_server_name: ${del_server_name} , select_server: ${select_server}"
+
 		# printf " - Delete List Info : $(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")\n"
 		del_list=$(cat < ${SVR_LIST} | grep -E "^${del_hostname}.*${del_ipaddr}")
 		printf " - Delete List Info : %s\n" "${del_list}"
 
-                read -e -p "Do you want to real delete? (y/n)  ? " ans_delete
+                read -e -p "Do you want to real delete? (y/n) ? " ans_delete
 		case ${ans_delete} in 
 			[Yy] | [Yy][Ee][Ss] )
 				show_print "${SCRIPT_NAME}.${LINENO} | CMD) sed -i \"/^${del_hostname}.*${del_ipaddr}/d\" ${SVR_LIST}"
@@ -321,7 +326,7 @@ word_count() {
 	max_len=0
 
 	if [ -f "${SVR_LIST}" ] ; then 
-		server_list=$(cat < "${SVR_LIST}" |  grep -Ev "^#|^$|<<.*>>" | awk '{print$1 "(" $2 ")"}')
+		server_list=$(cat < "${SVR_LIST}" | grep -Ev "^#|^$|<<.*>>" | awk '{print$1 "(" $2 ")"}')
 	
 		for slist in ${server_list} ; do 
 			len=$(echo ${slist} | wc -c)
@@ -380,9 +385,9 @@ script_mgmt_print() {
 		tool_start_num=$(( ${tool_start_num} + 1 ))	
 	done
 
-	select_show_num=$(cat ${TEMP_FILE} | grep -i show | awk '{print$2}' | sed -e "s/\.//g")
-	select_add_num=$(cat ${TEMP_FILE} | grep -i add | awk '{print$2}' | sed -e "s/\.//g")
-	select_del_num=$(cat ${TEMP_FILE} | grep -i delete | awk '{print$2}' | sed -e "s/\.//g")
+	select_show_num=$(cat < ${TEMP_FILE} | grep -i show | awk '{print$2}' | sed -e "s/\.//g")
+	select_add_num=$(cat < ${TEMP_FILE} | grep -i add | awk '{print$2}' | sed -e "s/\.//g")
+	select_del_num=$(cat < ${TEMP_FILE} | grep -i delete | awk '{print$2}' | sed -e "s/\.//g")
 }
 
 script_view_print() {
@@ -403,12 +408,12 @@ script_view_print() {
 		tool_start_num=$(( ${tool_start_num} + 1 ))	
 	done
 
-	select_view_conn_on_num=$(cat ${TEMP_FILE} | grep -i view_connecting_log_on | awk '{print$2}' | sed -e "s/\.//g")
-	select_view_conn_off_num=$(cat ${TEMP_FILE} | grep -i view_connecting_log_off | awk '{print$2}' | sed -e "s/\.//g")
-	select_print_log_on_num=$(cat ${TEMP_FILE} | grep -i print_log_on | awk '{print$2}' | sed -e "s/\.//g")
-	select_print_log_off_num=$(cat ${TEMP_FILE} | grep -i print_log_off | awk '{print$2}' | sed -e "s/\.//g")
-	select_debug_on_num=$(cat ${TEMP_FILE} | grep -i debug_on | awk '{print$2}' | sed -e "s/\.//g")
-	select_debug_off_num=$(cat ${TEMP_FILE} | grep -i debug_off | awk '{print$2}' | sed -e "s/\.//g")
+	select_view_conn_on_num=$(cat < ${TEMP_FILE} | grep -i view_connecting_log_on | awk '{print$2}' | sed -e "s/\.//g")
+	select_view_conn_off_num=$(cat < ${TEMP_FILE} | grep -i view_connecting_log_off | awk '{print$2}' | sed -e "s/\.//g")
+	select_print_log_on_num=$(cat < ${TEMP_FILE} | grep -i print_log_on | awk '{print$2}' | sed -e "s/\.//g")
+	select_print_log_off_num=$(cat < ${TEMP_FILE} | grep -i print_log_off | awk '{print$2}' | sed -e "s/\.//g")
+	select_debug_on_num=$(cat < ${TEMP_FILE} | grep -i debug_on | awk '{print$2}' | sed -e "s/\.//g")
+	select_debug_off_num=$(cat < ${TEMP_FILE} | grep -i debug_off | awk '{print$2}' | sed -e "s/\.//g")
 }
 
 exit_print() {
@@ -419,14 +424,14 @@ exit_print() {
 	printf "\t|${null_string}%03d. %-${1}s${null_string}|\n" 999 "Quit(Exit)"
 	sep_print ${title_len}
 
-	select_exit_num=$(cat ${TEMP_FILE} | grep -i "exit" | awk '{print$2}' | sed -e "s/\.//g")
+	select_exit_num=$(cat < ${TEMP_FILE} | grep -i "exit" | awk '{print$2}' | sed -e "s/\.//g")
 }
 
-init_serverlist() {
+init_server_list() {
 	printf " -- Not fount file : \"%s\"\n" "${SVR_LIST}"
 	printf " -- Add connection server list\n"
 
-	if [ $(cat ${SVR_LIST} | grep -E "^# HOSTNAME.*GATEWAY$"> /dev/null; echo "$?") -ne 0 ] ; then
+	if [ $(cat < ${SVR_LIST} | grep -E "^# HOSTNAME.*GATEWAY$"> /dev/null; echo "$?") -ne 0 ] ; then
 		printf "# HOSTNAME\tIP_ADDRESS\tUSER_NAME\tPASSWORD\tSSH/TELNET\tPORT\tGATEWAY\n" > ${SVR_LIST}
 	fi
 	add_host;
@@ -477,11 +482,11 @@ list_print() {
 			done 
 			#done > ${TEMP_FILE}
 		else
-			init_serverlist;
+			init_server_list;
 			list_print;
 		fi
 	else
-		init_serverlist;
+		init_server_list;
 		list_print;
 	fi
 }
@@ -637,11 +642,13 @@ create_expect_command() {
 		remote_conn_cnt=$(( ${remote_conn_cnt} + 1 ))
 	done
 
-	## honam
 	if [ "${ans_send_cmd}" ] && [ $(echo "${ans_send_cmd}" | wc -c) -ne 0 ]; then
-		send_cmd_text="expect -timeout 1 '\[#$%>\]'\nsend \"${ans_send_cmd}\\r\""
-		echo -e "${send_cmd_text}" >>  ${EXPECT_TEMP_FILE}
-	fi
+		{
+                	echo -e "expect -timeout 1 '\[#$%>\]'"
+                	echo -e "send {${ans_send_cmd}}"
+                	echo -e "send \"\\r\""
+                } >> ${EXPECT_TEMP_FILE}
+        fi
 
 	#printf "${gw_svr_info[*]}\n"
 	show_print "${SCRIPT_NAME}.${LINENO} | get gateway loop finished"
@@ -657,6 +664,7 @@ unset a_text
 unset b_text
 unset c_text
 unset echo_text
+unset ans_send_cmd
 
 }
 
@@ -727,7 +735,7 @@ select_server() {
 		
 		debug_stat=$(set -o | grep "xtrace" | awk '{print $(NF)}')
 		clear
-		printf "\n<< $(date) >>\n"
+		printf "\n<< %s >>\n" "$(data)"
 		printf "\t - %-21s : %s\n" "Debug Mode"          "${debug_stat}"
 		printf "\t - %-21s : %s\n" "Show Logging"        "${is_show_log}"
 		printf "\t - %-21s : %s\n" "View Connecting Log" "${is_show_send_cmd}"
@@ -735,20 +743,22 @@ select_server() {
 		cat ${TEMP_FILE}
 		echo ""
 
-		while true; do 
+		while true; do
 			read -e -p $"${null_string}Input) ${input_text} ? " ans_select
-			case ${ans_select} in 
+
+			case ${ans_select} in
 				 "$(echo ${select_exit_num})" | "$(echo "${select_exit_num#0}")" | [Ee][Xx][Ii][Tt] | [Qq][Uu][Ii][Tt] )
 					echo "finished script!"
-					exit 0 
+					exit 0
 				;;
-				* ) 
+				* )
 					grep_keyword=$(get_grep_keyword "${ans_select}")
 					conn_servers=$(cat < ${TEMP_FILE} | grep -E "${grep_keyword}")
-					if [ $? -eq 0 ] ; then 
+					run_rst_code=$?
+					if [ ${run_rst_code} -eq 0 ] ; then
 						break
 					else
-						printf "\t ==> WARN] Not found Select Name or Num , Input Select is \"${ans_select}\"\n"
+						printf "\t ==> WARN] Not found Select Name or Num , Input Select is \"%s\"\n" "${ans_select}"
 					fi
 				;;
 			esac
@@ -761,18 +771,18 @@ select_server() {
 					print_liner ">" 100
 					printf "\n\tShow config server list!\n"
 					print_liner "*" 100
-					printf "CMD ) cat ${SVR_LIST}\n"
+					printf "CMD ) cat %s\n" "${SVR_LIST}"
 					print_liner "<" 100
 					cat < ${SVR_LIST}
 					wait_continue;
 					;;
 				"$(echo ${select_add_num})" | "$(echo "${select_add_num#0}")" | [Aa][Dd][Dd])
-					show_print "${SCRIPT_NAME}.${LINENO} | Choice: Add Serverlist"
+					show_print "${SCRIPT_NAME}.${LINENO} | Choice: Add Server list"
 					add_host;
 					sleep 1
 					;;
 				"$(echo ${select_del_num})" | "$(echo "${select_del_num#0}")" | [Aa][Dd][Dd])
-					echo "Delete Serverlist"
+					printf "${c_red}Delete Server list${no_color}\n"
 					del_host;
 					sleep 1
 					;;
@@ -840,8 +850,8 @@ select_server() {
 		sleep 0.2
 	done
 
-	# honam
-	read -e -p " + Input) Send Command ? " ans_send_cmd
+	send_cmd_PROMPT="${c_green}${null_string}+ Input) Send Command (Default: None)?${no_color}"
+	read -e -p "$(echo -e ${send_cmd_PROMPT}) " ans_send_cmd
 	export ans_send_cmd
 
 	connector "${conn_ip}" "${conn_hostname}"
