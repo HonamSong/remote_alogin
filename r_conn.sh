@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-_version_=" 0.0.5"
+_version_=" 0.0.6"
 
 # 스크립트 실행 경로
 SCRIPT_PATH=$(cd $(echo $0 | xargs dirname) ; pwd ; cd - > /dev/null )
@@ -22,7 +22,7 @@ c_green='\033[0;32m'            ## Green Color
 c_bold_green='\033[1;32m'       ## Green Color
 c_magenta='\033[1;95m'          ## magent Color (same is purple)
 c_lightred='\033[1;31m'
-no_color='\033[0m'                    ## Unset Color(NoColor)
+no_color='\033[0m'              ## Unset Color(NoColor)
 
 
 ### [REMOTE COMMAND] ###
@@ -575,8 +575,9 @@ create_expect_command() {
 	show_print "${SCRIPT_NAME}.${LINENO} | conn_gateway = ${conn_gateway}"
 
 	if [ ${conn_gateway} ] ; then 
-		tmp_conn_ip_addr=${conn_ip_addr}
-		tmp_conn_hostname=${conn_hostname}
+		tmp_conn_ip_addr="${conn_ip_addr}"
+		tmp_conn_hostname="${conn_hostname}"
+		conn_server="${conn_hostname}"
 	
 		while_index=1
 		while true; do
@@ -589,6 +590,12 @@ create_expect_command() {
 					show_print "${SCRIPT_NAME}.${LINENO} |  ==> result : gw_svr_info[${while_index}] : ${gw_svr_info[${while_index}]}"
 				else
 					gw_svr_info[${while_index}]=$(cat < ${SVR_LIST} | grep -Ev "^#" | grep -E "^${conn_gateway}")
+					if [ $? -ne 0 ] ; then
+						printf "%-6s] Connecting to Server : ${c_green}%s${no_color}\n" "Info" "${conn_server}"
+                                                printf "${c_red}%-6s] Not found hostname(or Gateway Server Name) : %s${no_color}\n" "Error" "${conn_gateway}"
+                                                printf "${c_yellow}%-6s] Check Server Name on \"%s\" file..${no_color}\n\n." "Error" "${SVR_LIST}"
+                                                exit 1
+                                        fi
 					show_print "${SCRIPT_NAME}.${LINENO} | CMD) cat < ${SVR_LIST} | grep -Ev \"^#\" | grep -E \"^${conn_gateway}\""
 					show_print "${SCRIPT_NAME}.${LINENO} |  ==> result : gw_svr_info[${while_index}] : ${gw_svr_info[${while_index}]}"
 				fi
@@ -624,13 +631,18 @@ create_expect_command() {
 			r_next_conn="false"
 		fi
 		
-		show_print "${SCRIPT_NAME}.${LINENO} | Seach start_cnt : ${start_cnt} | ${gw_svr_info[${start_cnt}]}"
+		show_print "${SCRIPT_NAME}.${LINENO} | Search start_cnt : ${start_cnt} | ${gw_svr_info[${start_cnt}]}"
 		expect_command "${r_ip_addr}" "${r_user_name}" "${r_user_pass}" "${r_conn_type}" "${r_conn_port}" "${r_next_conn}"
-		b_text="expect -timeout 1 'ssword:'"
-		c_text="send \"${r_user_pass}\\r\""
 
+		if [ "$(echo ${r_conn_type} | tr [:upper:] [:lower:])" == "ssh" ] ; then
+		        b_text="expect {\n-re 'ssword:' { send \"${r_user_pass}\\r\" }"
+		        c_text="-re \"\$Prompt\" { send \"\\r\\r\" }\n}"
+		else
+		        b_text="expect -timeout 1 'ssword:'"
+		        c_text="send \"${r_user_pass}\\r\""
+		fi
 
-
+		# expect printing
 		if [ "${is_show_send_cmd}" == "true" ] ; then
 			echo_text="puts \" !! Remote Server Connecting...(${remote_conn_cnt}/${total_conn_cnt}) \""
 		else
@@ -662,6 +674,8 @@ create_expect_command() {
 
 set Prompt "\[#$%>\]"
 expect_command="
+set Prompt \"\[#$%>\]\"
+set timeout 1
 $(eval cat ${EXPECT_TEMP_FILE})
 interact
 "
@@ -671,6 +685,8 @@ unset b_text
 unset c_text
 unset echo_text
 unset ans_send_cmd
+
+show_print "${SCRIPT_NAME}.${LINENO} | ${expect_command}"
 
 }
 
@@ -710,17 +726,11 @@ get_grep_keyword() {
 connector() {
 	local remote_ip="$1"
 	local remote_hostname="$2"
-	#echo "get_parser \"${remote_ip}\" \"${remote_hostname}\""
+
+	show_print "${SCRIPT_NAME}.${LINENO} | get_parser \"${remote_ip}\" \"${remote_hostname}\""
 
 	get_parser "${remote_ip}" "${remote_hostname}"
 	conn_remote "${user_name}" "${user_passwd}" "${remote_ip_addr}" "${remote_hostname}" "${conn_port}"
-		
-	#if [ $(echo ${conn_type} | tr "[A-Z]" "[a-z]") == "ssh" ] ; then 
-	#	conn_remote "${user_name}" "${user_passwd}" "${remote_ip_addr}" "${remote_hostname}" "${conn_port}"
-	#elif [ $(echo ${conn_type} | tr "[A-Z]" "[a-z]") == "telnet" ] ; then
-	#	conn_telnet "${user_name}" "${user_passwd}" "${remote_ip_addr}" "${remote_hostname}"
-	#fi
-	#sleep 0.5
 }
 
 
@@ -755,6 +765,8 @@ select_server() {
 			case ${ans_select} in
 				 "$(echo ${select_exit_num})" | "$(echo "${select_exit_num#0}")" | [Ee][Xx][Ii][Tt] | [Qq][Uu][Ii][Tt] )
 					echo "finished script!"
+                                        delete_file "${TEMP_FILE}"
+                                        delete_file "${EXPECT_TEMP_FILE}"
 					exit 0
 				;;
 				* )
@@ -818,17 +830,6 @@ select_server() {
 					if [ "${conn_servers}" ] ;then 
 						break
 					fi
-					#grep_keyword=$(get_grep_keyword "${ans_select}")
-					#conn_servers=$(cat < ${TEMP_FILE} | grep -E "${grep_keyword}")
-					#if [ $? -eq 0 ] ; then 
-					#	if [ $(echo "${conn_servers}" | wc -l) -ge 1 ]; then
-					#		printf "\n\n"
-					#		is_break="true"
-					#		break
-					#	fi
-					#else
-					#	printf "\t -- Not found Select Name or Num : ${ans_select}\n"
-					#fi
 					;;
 			esac
 		fi
