@@ -1,6 +1,6 @@
 #!/bin/bash 
 
-_version_=" 0.0.6"
+_version_=" 0.0.7"
 
 # 스크립트 실행 경로
 SCRIPT_PATH=$(cd $(echo $0 | xargs dirname) ; pwd ; cd - > /dev/null )
@@ -71,7 +71,7 @@ show_print(){
 
 
 delete_file() {
-	if [ -f "${1}" ]; then 
+	if [ -f "${1}" ]; then
 		show_print "${SCRIPT_NAME}.${LINENO} | CMD) rm -rf ${1}"
 		rm -rf ${1}
 	fi
@@ -94,7 +94,7 @@ print_liner() {
 	start_num=1
 	while [ ${start_num} -le ${loop_cnt} ] ; do
 		printf "%s" "${line_str}"
-		if [ ${start_num} -eq ${loop_cnt} ]; then 
+		if [ ${start_num} -eq ${loop_cnt} ]; then
 			printf "\n"
 		fi
 		start_num=$(( ${start_num} + 1 ))
@@ -123,6 +123,8 @@ add_line_num() {
 	group_name="$1"	
 	is_break="false"
 
+	file_line_cnt=$(cat ${SVR_LIST} | wc -l)
+
 	echo " ** group_name : ${group_name}"
 
 	cat < ${SVR_LIST} | grep -Ei "^<<.*${group_name}.*>>$" > /dev/null
@@ -147,6 +149,14 @@ add_line_num() {
 						show_print "${SCRIPT_NAME}.${LINENO} | Command Return Code : ${rst_code}"
 						start_line=$((${start_line} + 1))
 					fi
+
+					if [ ${start_line} -ge ${file_line_cnt} ] ; then
+						add_line=$((${start_line}))
+						is_break="true"
+						show_print "${SCRIPT_NAME}.${LINENO} | last line | Add line num : ${add_line} , is_break = ${is_break}"
+						break;
+					fi
+
 				done
 			else
 				show_print "${SCRIPT_NAME}.${LINENO} | start_line : ${start_line}"
@@ -407,10 +417,10 @@ script_view_print() {
 	Debug_off
 	'
 	printf "\t|${null_string}%3s  %-${1}s${null_string}|\n" " " " "
-	for view_item in ${tool_name}; do 
+	for view_item in ${tool_name}; do
 		view_name="${view_item}"
 		printf "\t|${null_string}%03d. %-${1}s${null_string}|\n" ${tool_start_num} "${view_name}"
-		tool_start_num=$(( ${tool_start_num} + 1 ))	
+		tool_start_num=$(( ${tool_start_num} + 1 ))
 	done
 
 	select_view_conn_on_num=$(cat < ${TEMP_FILE} | grep -i view_connecting_log_on | awk '{print$2}' | sed -e "s/\.//g")
@@ -424,7 +434,7 @@ script_view_print() {
 exit_print() {
 	local sep_len=$(echo "$(printf "${null_string}%-${1}s${null_string}" "${line_text}")" | wc -c)
 	#sep_print ${title_len}
-	
+
 	printf "\t|${null_string}%3s  %-${1}s${null_string}|\n" " " " "
 	printf "\t|${null_string}%03d. %-${1}s${null_string}|\n" 999 "Quit(Exit)"
 	sep_print ${title_len}
@@ -436,7 +446,7 @@ init_server_list() {
 	printf " -- Not fount file : \"%s\"\n" "${SVR_LIST}"
 	printf " -- Add connection server list\n"
 
-	if [ $(cat < ${SVR_LIST} | grep -E "^# HOSTNAME.*GATEWAY$"> /dev/null; echo "$?") -ne 0 ] ; then
+	if [ $(cat < ${SVR_LIST} | grep -E "^# HOSTNAME.*GATEWAY$" 2>/dev/null > /dev/null; echo "$?") -ne 0 ] ; then
 		printf "# HOSTNAME\tIP_ADDRESS\tUSER_NAME\tPASSWORD\tSSH/TELNET\tPORT\tGATEWAY\n" > ${SVR_LIST}
 	fi
 	add_host;
@@ -449,20 +459,20 @@ list_print() {
 	group_index=1
 
 	max_string_len=$(word_count)
-	if [ -f "${SVR_LIST}" ] ; then 
+	if [ -f "${SVR_LIST}" ] ; then
 		#end_line=$(cat < ${SVR_LIST} | grep -Ev "^#" | wc -l)
 		end_line=$(cat -n < ${SVR_LIST} | tail -1 | awk '{print $1}')
 		show_print "${SCRIPT_NAME}.${LINENO} | end_line = ${end_line}"
 
-		if [ ${end_line} -ne 0 ] ;then 
+		if [ ${end_line} -ne 0 ] ;then
 			while [ ${start_line} -le ${end_line} ] ; do
 				# 주석과 공백 라인 제거
-				line_text=$(sed -n ${start_line}p ${SVR_LIST}| grep -Ev "^#|^$") 
-				if [ -n "${line_text}" ] ; then 
-					if [ $(echo "${line_text}" |grep -E "<<.*>>" > /dev/null ; echo $?) -eq 0 ] ; then 
+				line_text=$(sed -n ${start_line}p ${SVR_LIST}| grep -Ev "^#|^$")
+				if [ -n "${line_text}" ] ; then
+					if [ $(echo "${line_text}" |grep -E "<<.*>>" > /dev/null ; echo $?) -eq 0 ] ; then
 						group_name_len=$((${max_string_len} + 5))
-						sep_len=$(echo "$(printf "${null_string}%-${group_name_len}s${null_string}" "${line_text}")" | wc -c)	
-						if [ ${group_index} -eq 1 ] ; then 
+						sep_len=$(echo "$(printf "${null_string}%-${group_name_len}s${null_string}" "${line_text}")" | wc -c)
+						if [ ${group_index} -eq 1 ] ; then
 							title_print ${group_name_len} >  ${TEMP_FILE}
 						fi
 						sep_print ${sep_len} >>  ${TEMP_FILE}
@@ -472,19 +482,19 @@ list_print() {
 						server_name=$(echo ${line_text} | awk '{print $1 "(" $2 ")"}')
 						printf "\t|${null_string}%03d. %-${max_string_len}s${null_string}|\n" "${server_index}" "${server_name}" >>  ${TEMP_FILE}
 						server_index=$((${server_index} + 1))
-					fi 
+					fi
 				fi
 
 				start_line=$((${start_line} + 1))
-				if [ ${start_line} -gt ${end_line} ] ; then 
+				if [ ${start_line} -gt ${end_line} ] ; then
 					show_print "${SCRIPT_NAME}.${LINENO} | start_line: ${start_line}, end_line : ${end_line}"
 					script_mgmt_print ${max_string_len} >> ${TEMP_FILE}
 					script_view_print ${max_string_len} >> ${TEMP_FILE}
 					exit_print ${max_string_len} >> ${TEMP_FILE}
-					start_line=$((${end_line} + 1000))	
+					start_line=$((${end_line} + 1000))
 				fi
-				
-			done 
+
+			done
 			#done > ${TEMP_FILE}
 		else
 			init_server_list;
